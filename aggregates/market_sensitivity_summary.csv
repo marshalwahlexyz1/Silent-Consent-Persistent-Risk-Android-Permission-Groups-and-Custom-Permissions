@@ -1,0 +1,6 @@
+bucket,baseline_apps,baseline_pct,expanding_apps,expanding_pct,expansion_prevalence_within_bucket
+single_google_play,1821287,81.14,294257,77.23,16.16
+single_non_play,97525,4.34,9008,2.36,9.24
+mixed_google_and_other,220741,9.83,54520,14.31,24.70
+multi_non_play,105007,4.68,23240,6.10,22.13
+unknown_only,15,0.00,1,0.00,6.67

@@ -1,0 +1,32 @@
+{
+  "pairs_package_sets_disjoint": 35,
+  "pairs_with_any_requester_provider_access": 273,
+  "pairs_with_defining_report": 306,
+  "pairs_with_exported_provider": 158,
+  "pairs_with_loose_uri_match": 169,
+  "pairs_with_protects_data_signal": 216,
+  "pairs_with_provider_attachment": 258,
+  "pairs_with_requesting_permission_entry": 302,
+  "pairs_with_requesting_permission_manifest_use": 107,
+  "pairs_with_requesting_report": 306,
+  "pairs_with_strict_matched_access": 7,
+  "provider_storage_types": {
+    "Database": 201,
+    "Files": 62,
+    "Unknown": 38
+  },
+  "requester_access_profiles": {
+    "core_only": 10,
+    "mixed": 127,
+    "no_provider_access": 34,
+    "third_party_only": 126,
+    "unknown_only": 10
+  },
+  "strict_match_profiles": {
+    "core_only": 2,
+    "mixed": 3,
+    "no_provider_access": 300,
+    "third_party_only": 2
+  },
+  "total_pairs": 307
+}

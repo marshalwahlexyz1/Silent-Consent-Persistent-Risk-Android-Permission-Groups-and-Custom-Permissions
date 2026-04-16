@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Target Pair"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/targetSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/targetSummaryView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Operation"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/operationSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <EditText
+            android:id="@+id/uriEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="content://authority/path"
+            android:inputType="textUri" />
+
+        <EditText
+            android:id="@+id/projectionEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="projection columns, comma-separated" />
+
+        <EditText
+            android:id="@+id/selectionEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="selection clause" />
+
+        <EditText
+            android:id="@+id/selectionArgsEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="selection args, comma-separated" />
+
+        <EditText
+            android:id="@+id/sortOrderEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="sort order" />
+
+        <EditText
+            android:id="@+id/valuesEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="top|start"
+            android:hint="insert/update values as key=value, one per line"
+            android:inputType="textMultiLine"
+            android:lines="4"
+            android:minLines="4" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/loadButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Load Target" />
+
+            <Button
+                android:id="@+id/runButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="Run Probe" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Result"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/resultView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#111111"
+            android:padding="12dp"
+            android:textColor="#EDEDED"
+            android:textIsSelectable="true"
+            android:typeface="monospace" />
+
+    </LinearLayout>
+
+</ScrollView>
