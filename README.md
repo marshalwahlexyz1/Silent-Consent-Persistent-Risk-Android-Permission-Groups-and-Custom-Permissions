@@ -1,6 +1,6 @@
 # Silent Consent, Persistent Risk: Public Artifact Subset
 
-Public artifact repository for the DIMVA shepherding revision of:
+Public artifact repository:
 
 `Silent Consent, Persistent Risk: Android Permission Groups and Custom Permissions`
 
