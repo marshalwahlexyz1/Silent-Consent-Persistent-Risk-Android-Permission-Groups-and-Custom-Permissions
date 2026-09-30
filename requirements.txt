@@ -1,0 +1,5 @@
+# Python >= 3.9. Only generate_probe_app_data.py needs androguard/loguru and
+# only plot_vt_sensitivity.py needs matplotlib; the rest use the standard library.
+androguard>=4.0,<5
+loguru>=0.6
+matplotlib>=3.5

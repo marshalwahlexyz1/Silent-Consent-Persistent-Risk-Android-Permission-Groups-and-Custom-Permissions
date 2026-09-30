@@ -1,13 +1,9 @@
+import argparse
 import csv
 from collections import Counter, defaultdict
 from pathlib import Path
 
-
-SORTED_ANDROZOO = Path("/data/olawalea/ProjectCusPerm/sortedandrozoo.csv")
-MULTI_VERSION = Path("/tmp/multi_version_packages.txt")
-EXPANDING = Path("/tmp/expanding_packages.txt")
-OUT_MD = Path("/data/olawalea/Permission/Custom-Permission/MARKET_SENSITIVITY_RESPONSE.md")
-OUT_CSV = Path("/data/olawalea/Permission/Custom-Permission/market_sensitivity_summary.csv")
+from paths import DATA_DIR, OUTPUT_DIR, ensure_parent
 
 
 def read_set(path: Path) -> set[str]:
@@ -44,13 +40,29 @@ def pct(part: int, whole: int) -> float:
     return (100.0 * part / whole) if whole else 0.0
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="AndroZoo market sensitivity check for permission-group expansion.")
+    parser.add_argument("--sorted-androzoo", type=Path, default=DATA_DIR / "sortedandrozoo.csv",
+                        help="AndroZoo CSV with pkg_name and markets columns.")
+    parser.add_argument("--multi-version", type=Path, default=DATA_DIR / "multi_version_packages.txt",
+                        help="Newline-separated list of multi-version packages.")
+    parser.add_argument("--expanding", type=Path, default=DATA_DIR / "expanding_packages.txt",
+                        help="Newline-separated list of expanding packages.")
+    parser.add_argument("--output-csv", type=Path, default=OUTPUT_DIR / "market_sensitivity_summary.csv",
+                        help="Output CSV path.")
+    parser.add_argument("--output-md", type=Path, default=OUTPUT_DIR / "MARKET_SENSITIVITY_RESPONSE.md",
+                        help="Output Markdown path.")
+    return parser.parse_args()
+
+
 def main() -> None:
-    multi_version = read_set(MULTI_VERSION)
-    expanding = read_set(EXPANDING)
+    args = parse_args()
+    multi_version = read_set(args.multi_version)
+    expanding = read_set(args.expanding)
 
     package_markets: dict[str, set[str]] = defaultdict(set)
 
-    with SORTED_ANDROZOO.open(newline="", encoding="utf-8") as handle:
+    with args.sorted_androzoo.open(newline="", encoding="utf-8") as handle:
         reader = csv.reader(handle)
         header = next(reader)
         pkg_idx = header.index("pkg_name")
@@ -89,7 +101,7 @@ def main() -> None:
             }
         )
 
-    with OUT_CSV.open("w", newline="", encoding="utf-8") as handle:
+    with ensure_parent(args.output_csv).open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
@@ -149,9 +161,9 @@ def main() -> None:
         ]
     )
 
-    OUT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"wrote {OUT_CSV}")
-    print(f"wrote {OUT_MD}")
+    ensure_parent(args.output_md).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"wrote {args.output_csv}")
+    print(f"wrote {args.output_md}")
     for row in rows:
         print(row)
 

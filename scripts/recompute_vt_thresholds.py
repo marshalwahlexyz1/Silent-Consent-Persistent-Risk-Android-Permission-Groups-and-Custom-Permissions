@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 import math
-import os
 import sqlite3
 import sys
 from pathlib import Path
 
-
-METADATA_CSV = Path("/data/olawalea/ProjectCusPerm/metadata.csv")
-SORTED_ANDROZOO_CSV = Path("/data/olawalea/ProjectCusPerm/sortedandrozoo.csv")
-FLOWS_CSV = Path("/data/olawalea/ProjectCusPerm/permission_autogrant_flows.csv")
-
-DB_PATH = Path("/tmp/vt_threshold_recompute.sqlite3")
-OUT_CSV = Path("/data/olawalea/Permission/Custom-Permission/vt_threshold_recomputed_current.csv")
-OUT_MD = Path("/data/olawalea/Permission/Custom-Permission/VT_THRESHOLD_RESPONSE.md")
+from paths import DATA_DIR, OUTPUT_DIR, ensure_parent
 
 THRESHOLDS = [2, 5, 10]
 BATCH = 20000
@@ -53,10 +46,10 @@ def odds_ratio(a: int, b: int, c: int, d: int) -> float:
     return (a * d) / (b * c)
 
 
-def ensure_db() -> sqlite3.Connection:
-    if DB_PATH.exists():
-        DB_PATH.unlink()
-    conn = sqlite3.connect(DB_PATH)
+def ensure_db(db_path: Path) -> sqlite3.Connection:
+    if db_path.exists():
+        db_path.unlink()
+    conn = sqlite3.connect(ensure_parent(db_path))
     conn.execute("PRAGMA journal_mode=OFF")
     conn.execute("PRAGMA synchronous=OFF")
     conn.execute("PRAGMA temp_store=MEMORY")
@@ -74,14 +67,14 @@ def ensure_db() -> sqlite3.Connection:
     return conn
 
 
-def load_metadata(conn: sqlite3.Connection) -> None:
+def load_metadata(conn: sqlite3.Connection, metadata_csv: Path) -> None:
     sql = """
         INSERT INTO packages(package_name, version_count)
         VALUES (?, 1)
         ON CONFLICT(package_name) DO UPDATE SET version_count = version_count + 1
     """
     batch = []
-    with METADATA_CSV.open(newline="", encoding="utf-8") as f:
+    with metadata_csv.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             pkg = (row.get("package_name") or "").strip()
@@ -96,7 +89,7 @@ def load_metadata(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def load_expanding(conn: sqlite3.Connection) -> None:
+def load_expanding(conn: sqlite3.Connection, flows_csv: Path) -> None:
     sql = """
         INSERT INTO packages(package_name, expanding)
         VALUES (?, 1)
@@ -104,7 +97,7 @@ def load_expanding(conn: sqlite3.Connection) -> None:
     """
     seen = set()
     batch = []
-    with FLOWS_CSV.open(newline="", encoding="utf-8") as f:
+    with flows_csv.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             pkg = (row.get("package_name") or "").strip()
@@ -120,7 +113,7 @@ def load_expanding(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def load_vt(conn: sqlite3.Connection) -> None:
+def load_vt(conn: sqlite3.Connection, sorted_androzoo_csv: Path) -> None:
     sql = """
         INSERT INTO packages(package_name, max_vt)
         VALUES (?, ?)
@@ -131,7 +124,7 @@ def load_vt(conn: sqlite3.Connection) -> None:
             END
     """
     batch = []
-    with SORTED_ANDROZOO_CSV.open(newline="", encoding="utf-8") as f:
+    with sorted_androzoo_csv.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             pkg = (row.get("pkg_name") or "").strip()
@@ -215,8 +208,8 @@ def compute_threshold_rows(conn: sqlite3.Connection):
     return rows
 
 
-def write_csv(rows) -> None:
-    with OUT_CSV.open("w", newline="", encoding="utf-8") as f:
+def write_csv(rows, out_csv: Path) -> None:
+    with ensure_parent(out_csv).open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
             fieldnames=[
@@ -239,7 +232,7 @@ def write_csv(rows) -> None:
         writer.writerows(rows)
 
 
-def write_md(rows) -> None:
+def write_md(rows, args: argparse.Namespace) -> None:
     lines = [
         "# VT Threshold Response",
         "",
@@ -247,9 +240,9 @@ def write_md(rows) -> None:
         "",
         "## Current recomputation setup",
         "",
-        "- Expansion set: `/data/olawalea/ProjectCusPerm/permission_autogrant_flows.csv`",
-        "- Baseline denominator: multi-version apps from `/data/olawalea/ProjectCusPerm/metadata.csv`",
-        "- Malware proxy: maximum `vt_detection` across all versions from `/data/olawalea/ProjectCusPerm/sortedandrozoo.csv`",
+        f"- Expansion set: `{args.flows_csv}`",
+        f"- Baseline denominator: multi-version apps from `{args.metadata_csv}`",
+        f"- Malware proxy: maximum `vt_detection` across all versions from `{args.sorted_androzoo}`",
         "- Missing VT values treated as `0` detections",
         "",
         "## Threshold sensitivity",
@@ -273,24 +266,42 @@ def write_md(rows) -> None:
             "- VT should be described as a malware/unwanted-app proxy rather than ground truth.",
         ]
     )
-    OUT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    ensure_parent(args.output_md).write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Recompute malware/expansion association across VT thresholds.")
+    parser.add_argument("--metadata-csv", type=Path, default=DATA_DIR / "metadata.csv",
+                        help="AndroZoo metadata CSV (package_name per version).")
+    parser.add_argument("--sorted-androzoo", type=Path, default=DATA_DIR / "sortedandrozoo.csv",
+                        help="AndroZoo CSV with pkg_name and vt_detection columns.")
+    parser.add_argument("--flows-csv", type=Path, default=DATA_DIR / "permission_autogrant_flows.csv",
+                        help="CSV of permission auto-grant flows (package_name column).")
+    parser.add_argument("--db-path", type=Path, default=OUTPUT_DIR / "vt_threshold_recompute.sqlite3",
+                        help="Scratch SQLite database (recreated on each run).")
+    parser.add_argument("--output-csv", type=Path, default=OUTPUT_DIR / "vt_threshold_recomputed_current.csv",
+                        help="Output CSV path.")
+    parser.add_argument("--output-md", type=Path, default=OUTPUT_DIR / "VT_THRESHOLD_RESPONSE.md",
+                        help="Output Markdown path.")
+    return parser.parse_args()
 
 
 def main():
-    conn = ensure_db()
+    args = parse_args()
+    conn = ensure_db(args.db_path)
     try:
         print("1. Loading metadata version counts...")
-        load_metadata(conn)
+        load_metadata(conn, args.metadata_csv)
         print("2. Loading expanding-app markers...")
-        load_expanding(conn)
+        load_expanding(conn, args.flows_csv)
         print("3. Loading max VT per package...")
-        load_vt(conn)
+        load_vt(conn, args.sorted_androzoo)
         print("4. Computing thresholds...")
         rows = compute_threshold_rows(conn)
-        write_csv(rows)
-        write_md(rows)
-        print(f"wrote {OUT_CSV}")
-        print(f"wrote {OUT_MD}")
+        write_csv(rows, args.output_csv)
+        write_md(rows, args)
+        print(f"wrote {args.output_csv}")
+        print(f"wrote {args.output_md}")
         for row in rows:
             print(
                 f"VT>={row['threshold']}: "

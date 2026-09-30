@@ -1,19 +1,15 @@
+import argparse
 import csv
 import math
 import sys
 from collections import Counter
 from pathlib import Path
 
+from paths import DATA_DIR, OUTPUT_DIR, ensure_parent
+
 
 CSV_LIMIT = sys.maxsize
 THRESHOLDS = (2, 5, 10)
-BASE_DIR = Path("/data/olawalea/Permission/Custom-Permission")
-META_PATH = Path("/data/olawalea/ProjectCusPerm/metadata.csv")
-EXPANDING_PATH = Path("/tmp/expanding_packages.txt")
-MULTI_PATH = Path("/tmp/multi_version_packages.txt")
-OUT_CSV = BASE_DIR / "vt_threshold_recomputed_current.csv"
-OUT_MD = BASE_DIR / "VT_THRESHOLD_RESPONSE.md"
-OUT_CLASS_MD = BASE_DIR / "VT_CLASSIFICATION_SUMMARY.md"
 
 
 def read_set(path: Path) -> set[str]:
@@ -51,16 +47,34 @@ def top_rows(counter: Counter, limit: int = 12) -> list[tuple[str, int]]:
     return sorted(counter.items(), key=lambda item: (-item[1], item[0]))[:limit]
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Recompute VT-threshold sensitivity from AndroZoo metadata.")
+    parser.add_argument("--metadata-csv", type=Path, default=DATA_DIR / "metadata.csv",
+                        help="AndroZoo metadata CSV with package_name, vt_detection, classification.")
+    parser.add_argument("--expanding", type=Path, default=DATA_DIR / "expanding_packages.txt",
+                        help="Newline-separated list of expanding packages.")
+    parser.add_argument("--multi-version", type=Path, default=DATA_DIR / "multi_version_packages.txt",
+                        help="Newline-separated list of multi-version packages.")
+    parser.add_argument("--output-csv", type=Path, default=OUTPUT_DIR / "vt_threshold_recomputed_current.csv",
+                        help="Output CSV path.")
+    parser.add_argument("--output-md", type=Path, default=OUTPUT_DIR / "VT_THRESHOLD_RESPONSE.md",
+                        help="Output Markdown path.")
+    parser.add_argument("--output-class-md", type=Path, default=OUTPUT_DIR / "VT_CLASSIFICATION_SUMMARY.md",
+                        help="Output classification-summary Markdown path.")
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     csv.field_size_limit(CSV_LIMIT)
 
-    expanding = read_set(EXPANDING_PATH)
-    multi = read_set(MULTI_PATH)
+    expanding = read_set(args.expanding)
+    multi = read_set(args.multi_version)
 
     max_vt_by_pkg: dict[str, int] = {}
     class_at_max_vt: dict[str, str] = {}
 
-    with META_PATH.open(newline="", encoding="utf-8") as handle:
+    with args.metadata_csv.open(newline="", encoding="utf-8") as handle:
         reader = csv.reader(handle)
         header = next(reader)
         pkg_idx = header.index("package_name")
@@ -128,7 +142,7 @@ def main() -> None:
             if pkg in expanding:
                 expanding_counter[classification] += 1
 
-    with OUT_CSV.open("w", newline="", encoding="utf-8") as handle:
+    with ensure_parent(args.output_csv).open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
@@ -159,7 +173,7 @@ def main() -> None:
             "- The key issue for the revision is whether the malware-comparison claim stays directionally stable across stricter thresholds.",
         ]
     )
-    OUT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    ensure_parent(args.output_md).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     class_lines = [
         "# VT Classification Summary",
@@ -195,11 +209,11 @@ def main() -> None:
             "- The `classification` metadata can provide a coarse composition summary, but it should not be overclaimed as an exact malware-family taxonomy.",
         ]
     )
-    OUT_CLASS_MD.write_text("\n".join(class_lines) + "\n", encoding="utf-8")
+    ensure_parent(args.output_class_md).write_text("\n".join(class_lines) + "\n", encoding="utf-8")
 
-    print(f"wrote {OUT_CSV}")
-    print(f"wrote {OUT_MD}")
-    print(f"wrote {OUT_CLASS_MD}")
+    print(f"wrote {args.output_csv}")
+    print(f"wrote {args.output_md}")
+    print(f"wrote {args.output_class_md}")
     for row in rows:
         print(row)
     print("top_expanding", top_rows(expanding_counter))

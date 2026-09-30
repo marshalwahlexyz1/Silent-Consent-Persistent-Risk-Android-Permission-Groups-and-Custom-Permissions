@@ -32,3 +32,24 @@ Top-level layout:
 - `figures/`: released figure PDFs
 - `probe-app-template/`: sanitized generic probe harness
 - `autogrant-monitor-apk/`: current APK artifact and release note
+
+Running the scripts:
+
+```
+pip install -r requirements.txt
+python scripts/analyze_market_sensitivity.py --help
+```
+
+Every script takes `--flags` for its inputs and outputs. Unset flags default to
+files under two base folders, which you can set with environment variables:
+
+- `CUSTOMPERM_DATA_DIR` (default `data/`): input datasets such as
+  `sortedandrozoo.csv`, `metadata.csv`, `permission_autogrant_flows.csv`,
+  `multi_version_packages.txt`, `expanding_packages.txt`, and the defining /
+  requesting APK and report folders
+- `CUSTOMPERM_OUTPUT_DIR` (default `output/`): generated CSV, Markdown, JSON and
+  PDF files
+
+`generate_probe_app_data.py` writes into `probe-app-template/probe-app` by
+default; use `--probe-app-dir` to point it at a private copy instead. The input
+datasets are not part of this public release.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 import json
 import xml.etree.ElementTree as ET
@@ -8,13 +9,7 @@ from pathlib import Path
 from androguard.core.axml import AXMLPrinter
 from loguru import logger
 
-
-ROOT = Path("/data/olawalea/Permission/Custom-Permission")
-PAIR_CSV = ROOT / "provider_permission_pair_usage_analysis.csv"
-PROBE_APP_DIR = ROOT / "probe-app"
-MANIFEST_PATH = PROBE_APP_DIR / "app/src/main/AndroidManifest.xml"
-TARGETS_PATH = PROBE_APP_DIR / "app/src/main/assets/provider_targets.json"
-DEFINING_APK_DIR = Path("/data/olawalea/test/defininghashes")
+from paths import DATA_DIR, OUTPUT_DIR, REPO_ROOT, ensure_parent
 
 ANDROID_NS = "{http://schemas.android.com/apk/res/android}"
 
@@ -112,11 +107,25 @@ def safe_alias(idx: int) -> str:
     return f"CP{idx:03d}"
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate the probe-app target catalog and manifest entries.")
+    parser.add_argument("--pairs-csv", type=Path, default=OUTPUT_DIR / "provider_permission_pair_usage_analysis.csv",
+                        help="Per-pair CSV produced by analyze_provider_307_pairs.py.")
+    parser.add_argument("--defining-apk-dir", type=Path, default=DATA_DIR / "defininghashes",
+                        help="Directory of defining-app APKs named <sha256>.apk.")
+    parser.add_argument("--probe-app-dir", type=Path, default=REPO_ROOT / "probe-app-template" / "probe-app",
+                        help="Probe app project whose manifest and target catalog are overwritten.")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    manifest_path = args.probe_app_dir / "app/src/main/AndroidManifest.xml"
+    targets_path = args.probe_app_dir / "app/src/main/assets/provider_targets.json"
     csv.field_size_limit(10**9)
     rows = []
     permissions = set()
-    with PAIR_CSV.open(newline="", encoding="utf-8") as f:
+    with args.pairs_csv.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for idx, row in enumerate(reader, start=1):
             rows.append((idx, row))
@@ -133,7 +142,7 @@ def main():
             defining_package_fallbacks[0] if defining_package_fallbacks else ""
         )
         defining_sha = row["defining_sha256"].strip()
-        apk_path = DEFINING_APK_DIR / f"{defining_sha}.apk"
+        apk_path = args.defining_apk_dir / f"{defining_sha}.apk"
         if not apk_path.exists():
             continue
 
@@ -208,12 +217,12 @@ def main():
                     }
                 )
 
-    MANIFEST_PATH.write_text(render_manifest(permissions), encoding="utf-8")
-    TARGETS_PATH.write_text(json.dumps(targets, indent=2), encoding="utf-8")
+    ensure_parent(manifest_path).write_text(render_manifest(permissions), encoding="utf-8")
+    ensure_parent(targets_path).write_text(json.dumps(targets, indent=2), encoding="utf-8")
 
     no_authority = sum(1 for target in targets if not target["authority"])
-    print(f"wrote {MANIFEST_PATH}")
-    print(f"wrote {TARGETS_PATH}")
+    print(f"wrote {manifest_path}")
+    print(f"wrote {targets_path}")
     print(f"permissions={len(permissions)}")
     print(f"targets={len(targets)}")
     print(f"targets_without_authority={no_authority}")

@@ -1,22 +1,32 @@
 #!/usr/bin/env python3
-"""Regenerate Images/vt_threshold_sensitivity.pdf with a cleaner layout.
+"""Regenerate vt_threshold_sensitivity.pdf with a cleaner layout.
 
 The primary-threshold label in the prior figure overlapped the curve at
 t=20, making it hard to read. This version places the label in a fixed
 corner box with a leader line, and offsets per-point annotations away
 from the curve.
 """
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+from paths import OUTPUT_DIR, ensure_parent
+
 THRESHOLDS = [2, 5, 10, 20, 39]
 ODDS = [1.38, 1.31, 1.24, 1.35, 2.67]
 PRIMARY = 20
-OUT = Path(__file__).resolve().parent / "Images" / "vt_threshold_sensitivity.pdf"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Plot the VT-threshold sensitivity figure.")
+    parser.add_argument("--output", type=Path, default=OUTPUT_DIR / "vt_threshold_sensitivity.pdf",
+                        help="Output PDF path.")
+    return parser.parse_args()
 
 
 def main() -> None:
+    args = parse_args()
     fig, ax = plt.subplots(figsize=(4.6, 2.8))
 
     ax.plot(THRESHOLDS, ODDS, marker="o", color="#1f4e79", linewidth=1.8,
@@ -68,9 +78,8 @@ def main() -> None:
         ax.spines[spine].set_visible(False)
 
     fig.tight_layout()
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT, bbox_inches="tight")
-    print(f"wrote {OUT}")
+    fig.savefig(ensure_parent(args.output), bbox_inches="tight")
+    print(f"wrote {args.output}")
 
 
 if __name__ == "__main__":

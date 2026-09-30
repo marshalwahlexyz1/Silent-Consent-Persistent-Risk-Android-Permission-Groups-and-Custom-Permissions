@@ -28,6 +28,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from paths import DATA_DIR, OUTPUT_DIR, ensure_parent
+
 
 csv.field_size_limit(sys.maxsize)
 
@@ -359,27 +361,27 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyze the 307 provider custom-permission pairs.")
     parser.add_argument(
         "--pairs-csv",
-        default="/data/olawalea/ProjectCusPerm/custom_permissions_provider_normal_2plusnew.csv",
+        default=DATA_DIR / "custom_permissions_provider_normal_2plusnew.csv",
         help="CSV containing the provider custom-permission pairs.",
     )
     parser.add_argument(
         "--defining-reports",
-        default="/data/olawalea/test/defininghashes_reports",
+        default=DATA_DIR / "defininghashes_reports",
         help="Directory containing defining-app JSON reports.",
     )
     parser.add_argument(
         "--requesting-reports",
-        default="/data/olawalea/test/requestinghashes_reports",
+        default=DATA_DIR / "requestinghashes_reports",
         help="Directory containing requesting-app JSON reports.",
     )
     parser.add_argument(
         "--output-csv",
-        default="/data/olawalea/Permission/Custom-Permission/provider_permission_pair_usage_analysis.csv",
+        default=OUTPUT_DIR / "provider_permission_pair_usage_analysis.csv",
         help="Output CSV path.",
     )
     parser.add_argument(
         "--output-json",
-        default="/data/olawalea/Permission/Custom-Permission/provider_permission_pair_usage_summary.json",
+        default=OUTPUT_DIR / "provider_permission_pair_usage_summary.json",
         help="Output JSON summary path.",
     )
     return parser.parse_args()
@@ -392,8 +394,8 @@ def main() -> None:
         defining_reports=Path(args.defining_reports),
         requesting_reports=Path(args.requesting_reports),
     )
-    write_csv(Path(args.output_csv), rows)
-    write_json(Path(args.output_json), summary)
+    write_csv(ensure_parent(Path(args.output_csv)), rows)
+    write_json(ensure_parent(Path(args.output_json)), summary)
     print(json.dumps(summary, indent=2, sort_keys=True))
 
 
